@@ -1,0 +1,39 @@
+groups:
+  - name: lab28-platform
+    rules:
+      - alert: ApiGatewayDown
+        expr: up{job="api-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: API Gateway is unavailable
+          description: Prometheus has failed to scrape the API Gateway for one minute.
+
+      - alert: ApiGatewayHighErrorRate
+        expr: >-
+          sum(rate(http_requests_total{job="api-gateway",status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_requests_total{job="api-gateway"}[5m])), 0.001)
+          > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: API Gateway error rate exceeds 5%
+
+      - alert: VllmUpstreamErrors
+        expr: increase(gateway_upstream_errors_total{upstream="vllm"}[5m]) > 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Repeated vLLM upstream failures detected
+
+      - alert: KafkaBrokerDown
+        expr: kafka_brokers < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Kafka exporter cannot see a broker
